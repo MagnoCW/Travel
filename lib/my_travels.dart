@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:travel/map_sample.dart';
 
 class MyTravels extends StatefulWidget {
   const MyTravels({super.key});
@@ -59,6 +60,11 @@ class _MyTravelsState extends State<MyTravels> {
     });
   }
 
+  void _addLocation() {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const MapSample()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,6 +105,17 @@ class _MyTravelsState extends State<MyTravels> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _addLocation();
+        },
+        backgroundColor: Colors.blue,
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
