@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -67,15 +68,38 @@ class MapSampleState extends State<MapSample> {
     return position;
   }
 
-  void _showMarker(LatLng latLng) {
-    Marker marker = Marker(
-      markerId: MarkerId("marker-${latLng.latitude}-${latLng.longitude}"),
-      position: latLng,
-      infoWindow: InfoWindow(title: "Local Atual"),
-    );
-    setState(() {
-      _markers.add(marker);
-    });
+  void _showMarker(LatLng latLng) async {
+    try {
+      // Obtém a lista de endereços com base nas coordenadas
+      List<Placemark> addressList = await placemarkFromCoordinates(
+        latLng.latitude,
+        latLng.longitude,
+      );
+
+      if (addressList.isNotEmpty) {
+        Placemark address = addressList[0];
+        String? street = address.thoroughfare;
+
+        Marker marker = Marker(
+          markerId: MarkerId("marker-${latLng.latitude}-${latLng.longitude}"),
+          position: latLng,
+          infoWindow: InfoWindow(
+            title: street ?? "Local Desconhecido",
+          ),
+        );
+
+        if (mounted) {
+          // Verifica se o widget ainda está montado
+          setState(() {
+            _markers.add(marker);
+          });
+        } else {
+          print("Widget não está mais montado.");
+        }
+      }
+    } catch (e) {
+      print("Erro ao obter o endereço: $e");
+    }
   }
 
   void _moveCameraToPosition(Position position) async {
