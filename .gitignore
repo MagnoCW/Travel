@@ -44,3 +44,9 @@ app.*.map.json
 
 android/app/src/main/res/values/secrets.xml
 ios/Runner/Secrets.swift
+
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+
+lib/firebase_options.dart

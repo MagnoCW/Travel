@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -29,6 +30,8 @@ class MapSampleState extends State<MapSample> {
   );
 
   final Set<Marker> _markers = {};
+
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -92,6 +95,11 @@ class MapSampleState extends State<MapSample> {
           // Verifica se o widget ainda está montado
           setState(() {
             _markers.add(marker);
+            Map<String, dynamic> travel = {};
+            travel["titulo"] = street;
+            travel["latitude"] = latLng.latitude;
+            travel["longitude"] = latLng.longitude;
+            _db.collection("Viagens").add(travel);
           });
         } else {
           print("Widget não está mais montado.");
