@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:travel/map_sample.dart';
 
@@ -9,60 +12,48 @@ class MyTravels extends StatefulWidget {
 }
 
 class _MyTravelsState extends State<MyTravels> {
-  List<String> pontosTuristicos = [
-    // América do Norte
-    "Estátua da Liberdade - Nova York, EUA",
-    "Grand Canyon - Arizona, EUA",
-    "Disneyland - Anaheim, Califórnia, EUA",
-    "Parque Nacional de Yellowstone - EUA",
-    "CN Tower - Toronto, Canadá",
+  final _streamController = StreamController<QuerySnapshot>.broadcast();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-    // América do Sul
-    "Cristo Redentor - Rio de Janeiro, Brasil",
-    "Machu Picchu - Peru",
-    "Cataratas do Iguaçu - Brasil/Argentina",
-    "Deserto do Atacama - Chile",
-    "Pão de Açúcar - Rio de Janeiro, Brasil",
+  void _openMap(double latitude, double longitude) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapSample(
+          initialLatitude: latitude,
+          initialLongitude: longitude,
+        ),
+      ),
+    );
+  }
 
-    // Europa
-    "Torre Eiffel - Paris, França",
-    "Coliseu - Roma, Itália",
-    "Sagrada Família - Barcelona, Espanha",
-    "Big Ben - Londres, Reino Unido",
-    "Palácio de Buckingham - Londres, Reino Unido",
-
-    // Ásia
-    "Grande Muralha da China - China",
-    "Taj Mahal - Agra, Índia",
-    "Templo de Angkor Wat - Camboja",
-    "Torres Petronas - Kuala Lumpur, Malásia",
-    "Monte Fuji - Japão",
-
-    // Oceania
-    "Ópera de Sydney - Sydney, Austrália",
-    "Grande Barreira de Coral - Austrália",
-    "Uluru (Ayers Rock) - Austrália",
-    "Baía de Ha Long - Vietnã",
-    "Ilha de Páscoa - Chile",
-
-    // África
-    "Pirâmides de Gizé - Egito",
-    "Parque Nacional Kruger - África do Sul",
-    "Cascatas Victoria - Zâmbia/Zimbábue",
-    "Montanha da Mesa - Cidade do Cabo, África do Sul",
-    "Sahara - Norte da África",
-  ];
-
-  void _openMap() {}
-  void _deleteTravel(index) {
+  void _deleteTravel(idTravel) {
     setState(() {
-      pontosTuristicos.removeAt(index);
+      _db.collection("viagens").doc(idTravel).delete();
     });
   }
 
   void _addLocation() {
     Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const MapSample()));
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MapSample(),
+      ),
+    );
+  }
+
+  void _addListTravel() async {
+    final stream = _db.collection("viagens").snapshots();
+
+    stream.listen((data) {
+      _streamController.add(data);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _addListTravel();
   }
 
   @override
@@ -74,43 +65,65 @@ class _MyTravelsState extends State<MyTravels> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-                itemCount: pontosTuristicos.length,
-                itemBuilder: (context, index) {
-                  String titulo = pontosTuristicos[index];
-                  return GestureDetector(
-                    onTap: () {
-                      _openMap();
-                    },
-                    child: SizedBox(
-                      child: ListTile(
-                        title: Text(
-                          titulo,
-                        ),
-                        trailing: IconButton(
-                            onPressed: () {
-                              _deleteTravel(index);
-                            },
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                            )),
-                      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _streamController.stream,
+        builder: (context, snapshot) {
+          switch (snapshot.connectionState) {
+            case ConnectionState.none:
+            case ConnectionState.waiting:
+              return const Center(child: CircularProgressIndicator());
+            case ConnectionState.active:
+            case ConnectionState.done:
+              if (snapshot.hasError) {
+                return const Center(child: Text('Erro ao carregar dados'));
+              }
+              if (!snapshot.hasData || snapshot.data == null) {
+                return const Center(child: Text('Nenhuma viagem encontrada'));
+              }
+              QuerySnapshot querySnapshot = snapshot.data!;
+              List<DocumentSnapshot> travels = querySnapshot.docs.toList();
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: travels.length,
+                      itemBuilder: (context, index) {
+                        DocumentSnapshot item = travels[index];
+                        String title = item['titulo'];
+                        String idTravel = item.id;
+                        double latitude = item['latitude'];
+                        double longitude = item['longitude'];
+                        return GestureDetector(
+                          onTap: () {
+                            _openMap(latitude, longitude);
+                          },
+                          child: SizedBox(
+                            child: ListTile(
+                              title: Text(title),
+                              trailing: IconButton(
+                                onPressed: () {
+                                  _deleteTravel(idTravel);
+                                },
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }),
-          ),
-        ],
+                  ),
+                ],
+              );
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _addLocation();
-        },
+        onPressed: _addLocation,
         backgroundColor: Colors.blue,
-        child: Icon(
+        child: const Icon(
           Icons.add,
           color: Colors.white,
         ),
