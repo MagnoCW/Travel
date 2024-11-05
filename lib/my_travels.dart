@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:travel/map_controller.dart';
 import 'package:travel/map_sample.dart';
 
 class MyTravels extends StatefulWidget {
@@ -12,8 +11,13 @@ class MyTravels extends StatefulWidget {
 }
 
 class _MyTravelsState extends State<MyTravels> {
-  final _streamController = StreamController<QuerySnapshot>.broadcast();
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final MapController _mapController = MapController();
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
 
   void _openMap(double latitude, double longitude) {
     Navigator.push(
@@ -27,12 +31,6 @@ class _MyTravelsState extends State<MyTravels> {
     );
   }
 
-  void _deleteTravel(idTravel) {
-    setState(() {
-      _db.collection("viagens").doc(idTravel).delete();
-    });
-  }
-
   void _addLocation() {
     Navigator.push(
       context,
@@ -40,20 +38,6 @@ class _MyTravelsState extends State<MyTravels> {
         builder: (_) => const MapSample(),
       ),
     );
-  }
-
-  void _addListTravel() async {
-    final stream = _db.collection("viagens").snapshots();
-
-    stream.listen((data) {
-      _streamController.add(data);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _addListTravel();
   }
 
   @override
@@ -66,7 +50,7 @@ class _MyTravelsState extends State<MyTravels> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _streamController.stream,
+        stream: _mapController.travelStream,
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.none:
@@ -101,8 +85,8 @@ class _MyTravelsState extends State<MyTravels> {
                             child: ListTile(
                               title: Text(title),
                               trailing: IconButton(
-                                onPressed: () {
-                                  _deleteTravel(idTravel);
+                                onPressed: () async {
+                                  await _mapController.deleteTravel(idTravel);
                                 },
                                 icon: const Icon(
                                   Icons.delete,
